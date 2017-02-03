@@ -1,0 +1,16 @@
+hash: d52b47069cbe4bbd3f233fc6cbb1acc75fdd9c1b6de50795794ad6e4d2c5d5e0
+updated: 2017-02-03T13:21:10.303012216+01:00
+imports:
+- name: github.com/netflix/rend
+  version: 950f00556a8cace8db0e8af78408f6e3ac83c061
+  subpackages:
+  - binprot
+  - common
+  - handlers
+  - handlers/inmem
+  - metrics
+  - orcas
+  - server
+  - textprot
+  - timer
+testImports: []

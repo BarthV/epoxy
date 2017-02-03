@@ -1,0 +1,3 @@
+package: github.com/barthv/epoxy
+import:
+- package: github.com/netflix/rend
