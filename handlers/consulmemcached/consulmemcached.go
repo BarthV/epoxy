@@ -52,96 +52,18 @@ func (h *Handler) Set(cmd common.SetRequest) error {
 }
 
 func (h *Handler) Add(cmd common.SetRequest) error {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.ErrKeyExists
-	}
-
-	var exptime uint32
-	if cmd.Exptime > 0 {
-		exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    cmd.Data,
-		exptime: exptime,
-		flags:   cmd.Flags,
-	}
-
-	h.mutex.Unlock()
 	return nil
 }
 
 func (h *Handler) Replace(cmd common.SetRequest) error {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if !ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.ErrKeyNotFound
-	}
-
-	var exptime uint32
-	if cmd.Exptime > 0 {
-		exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    cmd.Data,
-		exptime: exptime,
-		flags:   cmd.Flags,
-	}
-
-	h.mutex.Unlock()
 	return nil
 }
 
 func (h *Handler) Append(cmd common.SetRequest) error {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if !ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.ErrKeyNotFound
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    append(e.data, cmd.Data...),
-		exptime: e.exptime,
-		flags:   e.flags,
-	}
-
-	h.mutex.Unlock()
 	return nil
 }
 
 func (h *Handler) Prepend(cmd common.SetRequest) error {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if !ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.ErrKeyNotFound
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    append(cmd.Data, e.data...),
-		exptime: e.exptime,
-		flags:   e.flags,
-	}
-
-	h.mutex.Unlock()
 	return nil
 }
 
@@ -183,105 +105,18 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 }
 
 func (h *Handler) GetE(cmd common.GetRequest) (<-chan common.GetEResponse, <-chan error) {
-	dataOut := make(chan common.GetEResponse, len(cmd.Keys))
-	errorOut := make(chan error)
-
-	h.mutex.RLock()
-
-	for idx, bk := range cmd.Keys {
-		e, ok := h.data[string(bk)]
-
-		if !ok || e.isExpired() {
-			delete(h.data, string(bk))
-			dataOut <- common.GetEResponse{
-				Miss:   true,
-				Quiet:  cmd.Quiet[idx],
-				Opaque: cmd.Opaques[idx],
-				Key:    bk,
-			}
-			continue
-		}
-
-		dataOut <- common.GetEResponse{
-			Miss:    false,
-			Quiet:   cmd.Quiet[idx],
-			Opaque:  cmd.Opaques[idx],
-			Exptime: e.exptime,
-			Flags:   e.flags,
-			Key:     bk,
-			Data:    e.data,
-		}
-	}
-
-	h.mutex.RUnlock()
-
-	close(dataOut)
-	close(errorOut)
-	return dataOut, errorOut
+	return nil, nil
 }
 
 func (h *Handler) GAT(cmd common.GATRequest) (common.GetResponse, error) {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if !ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.GetResponse{
-			Miss:   true,
-			Opaque: cmd.Opaque,
-			Key:    cmd.Key,
-		}, nil
-	}
-
-	if cmd.Exptime > 0 {
-		e.exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	} else {
-		e.exptime = 0
-	}
-
-	h.data[string(cmd.Key)] = e
-
-	h.mutex.Unlock()
-
-	return common.GetResponse{
-		Miss:   false,
-		Opaque: cmd.Opaque,
-		Flags:  e.flags,
-		Key:    cmd.Key,
-		Data:   e.data,
-	}, nil
+	return common.GetResponse{}, nil
 }
 
 func (h *Handler) Delete(cmd common.DeleteRequest) error {
-	h.mutex.Lock()
-	delete(h.data, string(cmd.Key))
-	h.mutex.Unlock()
 	return nil
 }
 
 func (h *Handler) Touch(cmd common.TouchRequest) error {
-	h.mutex.Lock()
-
-	e, ok := h.data[string(cmd.Key)]
-
-	if !ok || e.isExpired() {
-		delete(h.data, string(cmd.Key))
-		h.mutex.Unlock()
-		return common.ErrKeyNotFound
-	}
-
-	if cmd.Exptime > 0 {
-		e.exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	} else {
-		e.exptime = 0
-	}
-
-	h.data[string(cmd.Key)] = e
-
-	h.mutex.Unlock()
-
 	return nil
 }
 
