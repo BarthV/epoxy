@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/netflix/rend/handlers"
-	"github.com/netflix/rend/handlers/inmem"
+	"github.com/barthv/epoxy/handlers/consulmemcached"
 	"github.com/netflix/rend/orcas"
 	"github.com/netflix/rend/server"
 )
@@ -15,7 +15,7 @@ func main() {
 		},
 		server.Default,
 		orcas.L1Only,
-		inmem.New,
+		consulmemcached.New,
                 handlers.NilHandler,
 	)
 }
