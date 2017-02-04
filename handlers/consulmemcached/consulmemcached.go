@@ -1,53 +1,77 @@
 package consulmemcached
 
 import (
-	"sync"
 	"time"
+	"fmt"
+        "strconv"
 
+        "github.com/hashicorp/consul/api"
 	"github.com/netflix/rend/common"
 	"github.com/netflix/rend/handlers"
+        "github.com/wrighty/ketama"
 )
 
 type entry struct {
-	exptime uint32
-	flags   uint32
-	data    []byte
+   exptime uint32
+   flags   uint32
+   data    []byte
 }
 
 func (e entry) isExpired() bool {
 	return e.exptime != 0 && e.exptime < uint32(time.Now().Unix())
 }
 
+
 type Handler struct {
-	data  map[string]entry
-	mutex *sync.RWMutex
+  data  map[string]entry
 }
 
 var singleton = &Handler{
 	data:  make(map[string]entry),
-	mutex: new(sync.RWMutex),
+}
+
+var MemcachedCluster []string
+
+
+func ConsulPoller() {
+        config := api.DefaultConfig()
+        config.Address = "consul01-par.central.criteo.preprod:8500"
+        consul, _ := api.NewClient(config)
+
+        options := api.QueryOptions{}
+
+        for {
+                cluster := []string{}
+                res, resqry, _ := consul.Catalog().Service("memcached-mesos-test1", "", &options)
+                for _, service := range res {
+                        //fmt.Println(service.Node + ":" + strconv.Itoa(service.ServicePort))
+                        cluster = append(cluster, service.Node + ":" + strconv.Itoa(service.ServicePort))
+                }
+                MemcachedCluster = cluster
+                fmt.Println(">> Cluster update <<")
+                fmt.Println(MemcachedCluster)
+                fmt.Println("")
+                options.WaitIndex = resqry.LastIndex
+        }
 }
 
 func New() (handlers.Handler, error) {
+        go ConsulPoller()
 	// return the same singleton map each time so all connections see the same data
 	return singleton, nil
 }
 
 func (h *Handler) Set(cmd common.SetRequest) error {
-	h.mutex.Lock()
+        fmt.Println(">> Set operation <<")
+        fmt.Println("key = " + string(cmd.Key))
+        fmt.Println("data = " + string(cmd.Data))
+        fmt.Printf("ttl = "+ strconv.FormatInt(int64(cmd.Exptime),10) + "\n")
+        fmt.Println("  -----  ")
 
-	var exptime uint32
-	if cmd.Exptime > 0 {
-		exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    cmd.Data,
-		exptime: exptime,
-		flags:   cmd.Flags,
-	}
-
-	h.mutex.Unlock()
+        c := ketama.Make(MemcachedCluster)
+        host := c.GetHost(string(cmd.Key))
+        fmt.Println("CONSISTENT HASHING'S HOST = " + host)
+        fmt.Println("")
 	return nil
 }
 
@@ -68,40 +92,7 @@ func (h *Handler) Prepend(cmd common.SetRequest) error {
 }
 
 func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan error) {
-	dataOut := make(chan common.GetResponse, len(cmd.Keys))
-	errorOut := make(chan error)
-
-	h.mutex.RLock()
-
-	for idx, bk := range cmd.Keys {
-		e, ok := h.data[string(bk)]
-
-		if !ok || e.isExpired() {
-			delete(h.data, string(bk))
-			dataOut <- common.GetResponse{
-				Miss:   true,
-				Quiet:  cmd.Quiet[idx],
-				Opaque: cmd.Opaques[idx],
-				Key:    bk,
-			}
-			continue
-		}
-
-		dataOut <- common.GetResponse{
-			Miss:   false,
-			Quiet:  cmd.Quiet[idx],
-			Opaque: cmd.Opaques[idx],
-			Flags:  e.flags,
-			Key:    bk,
-			Data:   e.data,
-		}
-	}
-
-	h.mutex.RUnlock()
-
-	close(dataOut)
-	close(errorOut)
-	return dataOut, errorOut
+	return nil, nil
 }
 
 func (h *Handler) GetE(cmd common.GetRequest) (<-chan common.GetEResponse, <-chan error) {

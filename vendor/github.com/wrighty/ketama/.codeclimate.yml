@@ -1,0 +1,15 @@
+engines:
+    fixme:
+        enabled: true
+    govet:
+        enabled: true
+    golint:
+        enabled: true
+        exclude_paths:
+            - "**_test.go"
+    gofmt:
+        enabled: true
+ratings:
+    paths: 
+        - "**.go"
+exclude_paths: []
