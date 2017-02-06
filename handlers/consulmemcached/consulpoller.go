@@ -8,12 +8,10 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-var MemcachedList memcache.ServerList
-
 func ConsulPoller(list *memcache.ServerList) {
-	config := api.DefaultConfig()
-	config.Address = "consul01-par.central.criteo.preprod:8500"
-	consul, _ := api.NewClient(config)
+	consulconf := api.DefaultConfig()
+	consulconf.Address = "consul01-par.central.criteo.preprod:8500"
+	consul, _ := api.NewClient(consulconf)
 
 	options := api.QueryOptions{}
 
@@ -24,10 +22,9 @@ func ConsulPoller(list *memcache.ServerList) {
 			//fmt.Println(service.Node + ":" + strconv.Itoa(service.ServicePort))
 			cluster = append(cluster, service.Node+":"+strconv.Itoa(service.ServicePort))
 		}
-		MemcachedCluster = cluster
 		fmt.Println(">> Cluster update <<")
 		list.SetServers(cluster...)
-		fmt.Println(MemcachedCluster)
+		fmt.Println(cluster)
 		fmt.Println("")
 		options.WaitIndex = resqry.LastIndex
 	}
