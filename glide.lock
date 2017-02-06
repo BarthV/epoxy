@@ -1,6 +1,10 @@
 hash: d52b47069cbe4bbd3f233fc6cbb1acc75fdd9c1b6de50795794ad6e4d2c5d5e0
-updated: 2017-02-04T01:23:50.676469223+01:00
+updated: 2017-02-05T23:21:30.650735916+01:00
 imports:
+- name: github.com/bradfitz/gomemcache
+  version: 2fafb84a66c4911e11a8f50955b01e74fe3ab9c5
+  subpackages:
+  - memcache
 - name: github.com/hashicorp/consul
   version: ee8705f54994151efe83918891c46e8751c0a1b0
   subpackages:

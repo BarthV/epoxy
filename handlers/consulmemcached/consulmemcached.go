@@ -1,7 +1,6 @@
 package consulmemcached
 
 import (
-	"time"
 	"fmt"
         "strconv"
 
@@ -9,31 +8,21 @@ import (
 	"github.com/netflix/rend/common"
 	"github.com/netflix/rend/handlers"
         "github.com/wrighty/ketama"
+        "github.com/bradfitz/gomemcache/memcache"
 )
 
-type entry struct {
-   exptime uint32
-   flags   uint32
-   data    []byte
-}
-
-func (e entry) isExpired() bool {
-	return e.exptime != 0 && e.exptime < uint32(time.Now().Unix())
-}
-
-
 type Handler struct {
-  data  map[string]entry
+  mc *memcache.Client
 }
 
 var singleton = &Handler{
-	data:  make(map[string]entry),
+  mc: memcache.NewFromSelector(&MemcachedList),
 }
 
+var MemcachedList memcache.ServerList
 var MemcachedCluster []string
 
-
-func ConsulPoller() {
+func (h *Handler) ConsulPoller() {
         config := api.DefaultConfig()
         config.Address = "consul01-par.central.criteo.preprod:8500"
         consul, _ := api.NewClient(config)
@@ -49,6 +38,7 @@ func ConsulPoller() {
                 }
                 MemcachedCluster = cluster
                 fmt.Println(">> Cluster update <<")
+                MemcachedList.SetServers(cluster...)
                 fmt.Println(MemcachedCluster)
                 fmt.Println("")
                 options.WaitIndex = resqry.LastIndex
@@ -56,8 +46,8 @@ func ConsulPoller() {
 }
 
 func New() (handlers.Handler, error) {
-        go ConsulPoller()
-	// return the same singleton map each time so all connections see the same data
+        fmt.Println(">> Starting Proxy ! <<")
+        go singleton.ConsulPoller()
 	return singleton, nil
 }
 
@@ -69,9 +59,12 @@ func (h *Handler) Set(cmd common.SetRequest) error {
         fmt.Println("  -----  ")
 
         c := ketama.Make(MemcachedCluster)
-        host := c.GetHost(string(cmd.Key))
-        fmt.Println("CONSISTENT HASHING'S HOST = " + host)
+        hostketama := c.GetHost(string(cmd.Key))
+        fmt.Println("KETAMA HOST = " + hostketama)
+        hostclient, _ := MemcachedList.PickServer(string(cmd.Key))
+        fmt.Println("GO LIB HOST = " + hostclient.String())
         fmt.Println("")
+        h.mc.Set(&memcache.Item{Key: string(cmd.Key), Value: cmd.Data})
 	return nil
 }
 
