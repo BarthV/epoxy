@@ -74,7 +74,12 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 			}
 			fmt.Println("Unkown error !")
 			fmt.Println(err)
-			errorOut <- err
+			dataOut <- common.GetResponse{
+				Miss:   true,
+				Quiet:  cmd.Quiet[idx],
+				Opaque: cmd.Opaques[idx],
+				Key:    bk,
+			}
 			continue
 		}
 
