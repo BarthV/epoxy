@@ -1,53 +1,38 @@
 package consulmemcached
 
 import (
-	"sync"
-	"time"
+	"fmt"
+	"strconv"
 
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/netflix/rend/common"
 	"github.com/netflix/rend/handlers"
 )
 
-type entry struct {
-	exptime uint32
-	flags   uint32
-	data    []byte
-}
-
-func (e entry) isExpired() bool {
-	return e.exptime != 0 && e.exptime < uint32(time.Now().Unix())
-}
-
 type Handler struct {
-	data  map[string]entry
-	mutex *sync.RWMutex
+	mc *memcache.Client
 }
 
-var singleton = &Handler{
-	data:  make(map[string]entry),
-	mutex: new(sync.RWMutex),
-}
-
-func New() (handlers.Handler, error) {
-	// return the same singleton map each time so all connections see the same data
-	return singleton, nil
+func New(mclient *memcache.Client) handlers.HandlerConst {
+	return func() (handlers.Handler, error) {
+		fmt.Println(">> Starting Proxy ! <<")
+		handler := &Handler{
+			mc: mclient,
+		}
+		return handler, nil
+	}
 }
 
 func (h *Handler) Set(cmd common.SetRequest) error {
-	h.mutex.Lock()
+	log.WithFields(log.Fields{
+		"key":  cmd.Key,
+		"data": cmd.Data,
+		"ttl":  strconv.FormatInt(int64(cmd.Exptime), 10),
+	}).Info("Set operation")
 
-	var exptime uint32
-	if cmd.Exptime > 0 {
-		exptime = uint32(time.Now().Unix()) + cmd.Exptime
-	}
-
-	h.data[string(cmd.Key)] = entry{
-		data:    cmd.Data,
-		exptime: exptime,
-		flags:   cmd.Flags,
-	}
-
-	h.mutex.Unlock()
+	h.mc.Set(&memcache.Item{Key: string(cmd.Key), Value: cmd.Data})
 	return nil
 }
 
@@ -69,15 +54,18 @@ func (h *Handler) Prepend(cmd common.SetRequest) error {
 
 func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan error) {
 	dataOut := make(chan common.GetResponse, len(cmd.Keys))
+	defer close(dataOut)
 	errorOut := make(chan error)
+	defer close(errorOut)
 
-	h.mutex.RLock()
+	log.Debug("Get operation")
 
 	for idx, bk := range cmd.Keys {
-		e, ok := h.data[string(bk)]
+		item, err := h.mc.Get(string(bk))
 
-		if !ok || e.isExpired() {
-			delete(h.data, string(bk))
+		if err != nil {
+			log.WithError(err).Debug("Get fail")
+			//if err == common.ErrKeyNotFound {
 			dataOut <- common.GetResponse{
 				Miss:   true,
 				Quiet:  cmd.Quiet[idx],
@@ -87,20 +75,21 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 			continue
 		}
 
+		log.WithFields(log.Fields{
+			"key":  item.Key,
+			"data": item.Value,
+			"ttl":  strconv.FormatInt(int64(item.Expiration), 10),
+		}).Info("Get operation")
+
 		dataOut <- common.GetResponse{
 			Miss:   false,
 			Quiet:  cmd.Quiet[idx],
 			Opaque: cmd.Opaques[idx],
-			Flags:  e.flags,
+			Flags:  item.Flags,
 			Key:    bk,
-			Data:   e.data,
+			Data:   item.Value,
 		}
 	}
-
-	h.mutex.RUnlock()
-
-	close(dataOut)
-	close(errorOut)
 	return dataOut, errorOut
 }
 

@@ -1,3 +1,19 @@
 package: github.com/barthv/epoxy
 import:
 - package: github.com/netflix/rend
+  subpackages:
+  - handlers
+  - orcas
+  - server
+  - common
+- package: github.com/Sirupsen/logrus
+  version: ~0.11.2
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
+- package: github.com/bradfitz/gomemcache
+  subpackages:
+  - memcache
+- package: github.com/hashicorp/consul
+  version: ~0.7.4
+  subpackages:
+  - api

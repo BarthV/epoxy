@@ -1,21 +1,12 @@
 package main
 
 import (
-	"github.com/netflix/rend/handlers"
-	"github.com/barthv/epoxy/handlers/consulmemcached"
-	"github.com/netflix/rend/orcas"
-	"github.com/netflix/rend/server"
+	log "github.com/Sirupsen/logrus"
+	"github.com/barthv/epoxy/cmd"
 )
 
 func main() {
-	server.ListenAndServe(
-		server.ListenArgs{
-			Type: server.ListenTCP,
-			Port: 11211,
-		},
-		server.Default,
-		orcas.L1Only,
-		consulmemcached.New,
-                handlers.NilHandler,
-	)
+	if err := cmd.RootCmd.Execute(); err != nil {
+		log.WithError(err).Fatal("Execute failed")
+	}
 }
