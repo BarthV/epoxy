@@ -2,7 +2,7 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/barthv/epoxy/cmd"
+	"github.com/BarthV/epoxy/cmd"
 )
 
 func main() {

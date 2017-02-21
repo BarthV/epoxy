@@ -17,7 +17,7 @@ package cmd
 import (
 	"log"
 
-	"github.com/barthv/epoxy/handlers/consulmemcached"
+	"github.com/BarthV/epoxy/handlers/consulmemcached"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/netflix/rend/handlers"
 	"github.com/netflix/rend/orcas"
