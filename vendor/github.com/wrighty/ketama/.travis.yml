@@ -1,6 +1,0 @@
-language: go
-install:
-    - go get gopkg.in/fsnotify.v1
-go:
-    - 1.5
-    - 1.6

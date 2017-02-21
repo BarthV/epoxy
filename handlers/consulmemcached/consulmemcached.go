@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/netflix/rend/common"
 	"github.com/netflix/rend/handlers"
@@ -24,12 +26,11 @@ func New(mclient *memcache.Client) handlers.HandlerConst {
 }
 
 func (h *Handler) Set(cmd common.SetRequest) error {
-	fmt.Println(">> Set operation <<")
-	fmt.Println("key = " + string(cmd.Key))
-	fmt.Println("data = " + string(cmd.Data))
-	fmt.Printf("ttl = " + strconv.FormatInt(int64(cmd.Exptime), 10) + "\n")
-	fmt.Println("  -----  ")
-	fmt.Println("")
+	log.WithFields(log.Fields{
+		"key":  cmd.Key,
+		"data": cmd.Data,
+		"ttl":  strconv.FormatInt(int64(cmd.Exptime), 10),
+	}).Info("Set operation")
 
 	h.mc.Set(&memcache.Item{Key: string(cmd.Key), Value: cmd.Data})
 	return nil
@@ -53,27 +54,18 @@ func (h *Handler) Prepend(cmd common.SetRequest) error {
 
 func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan error) {
 	dataOut := make(chan common.GetResponse, len(cmd.Keys))
+	defer close(dataOut)
 	errorOut := make(chan error)
+	defer close(errorOut)
 
-	fmt.Println(">> Get operation <<")
+	log.Debug("Get operation")
 
 	for idx, bk := range cmd.Keys {
 		item, err := h.mc.Get(string(bk))
 
 		if err != nil {
+			log.WithError(err).Debug("Get fail")
 			//if err == common.ErrKeyNotFound {
-			if err.Error() == "memcache: cache miss" {
-				fmt.Println("Key not found !")
-				dataOut <- common.GetResponse{
-					Miss:   true,
-					Quiet:  cmd.Quiet[idx],
-					Opaque: cmd.Opaques[idx],
-					Key:    bk,
-				}
-				continue
-			}
-			fmt.Println("Unkown error !")
-			fmt.Println(err)
 			dataOut <- common.GetResponse{
 				Miss:   true,
 				Quiet:  cmd.Quiet[idx],
@@ -83,11 +75,12 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 			continue
 		}
 
-		fmt.Println("key = " + item.Key)
-		fmt.Println("data = " + string(item.Value))
-		fmt.Printf("ttl = " + strconv.FormatInt(int64(item.Expiration), 10) + "\n")
-		fmt.Println("  -----  ")
-		fmt.Println("")
+		log.WithFields(log.Fields{
+			"key":  item.Key,
+			"data": item.Value,
+			"ttl":  strconv.FormatInt(int64(item.Expiration), 10),
+		}).Info("Get operation")
+
 		dataOut <- common.GetResponse{
 			Miss:   false,
 			Quiet:  cmd.Quiet[idx],
@@ -97,8 +90,6 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 			Data:   item.Value,
 		}
 	}
-	close(dataOut)
-	close(errorOut)
 	return dataOut, errorOut
 }
 
