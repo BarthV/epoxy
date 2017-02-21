@@ -1,4 +1,4 @@
-package: github.com/barthv/epoxy
+package: github.com/BarthV/epoxy
 import:
 - package: github.com/netflix/rend
   subpackages:
