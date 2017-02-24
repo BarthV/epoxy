@@ -19,14 +19,13 @@ func ConsulPoller(list *memcache.ServerList) {
 
 	for {
 		cluster := []string{}
-		res, resqry, err := consul.Catalog().Service(viper.GetString("consul.service"), "", &consulOptions)
+		res, resqry, err := consul.Health().Service(viper.GetString("consul.service"), "", true, &consulOptions)
 		if err != nil {
-			log.WithError(err).Error("Consul Catalog query failed")
+			log.WithError(err).Error("Consul Services query failed")
 			continue
 		}
 		for _, service := range res {
-			//fmt.Println(service.Node + ":" + strconv.Itoa(service.ServicePort))
-			cluster = append(cluster, service.Node+":"+strconv.Itoa(service.ServicePort))
+			cluster = append(cluster, service.Service.Address+":"+strconv.Itoa(service.Service.Port))
 		}
 		err = list.SetServers(cluster...)
 		if err != nil {

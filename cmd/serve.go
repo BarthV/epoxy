@@ -45,7 +45,6 @@ func init() {
 }
 
 func proxy(cmd *cobra.Command, args []string) {
-	//go ConsulPoller()
 	var MemcachedList memcache.ServerList
 	go consulmemcached.ConsulPoller(&MemcachedList)
 	mc := memcache.NewFromSelector(&MemcachedList)

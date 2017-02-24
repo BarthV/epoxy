@@ -32,7 +32,10 @@ func (h *Handler) Set(cmd common.SetRequest) error {
 		"ttl":  strconv.FormatInt(int64(cmd.Exptime), 10),
 	}).Info("Set operation")
 
-	h.mc.Set(&memcache.Item{Key: string(cmd.Key), Value: cmd.Data})
+	err := h.mc.Set(&memcache.Item{Key: string(cmd.Key), Value: cmd.Data})
+	if err != nil {
+		return gomemcacheErrorMapper(err)
+	}
 	return nil
 }
 
@@ -65,7 +68,6 @@ func (h *Handler) Get(cmd common.GetRequest) (<-chan common.GetResponse, <-chan 
 
 		if err != nil {
 			log.WithError(err).Debug("Get fail")
-			//if err == common.ErrKeyNotFound {
 			dataOut <- common.GetResponse{
 				Miss:   true,
 				Quiet:  cmd.Quiet[idx],

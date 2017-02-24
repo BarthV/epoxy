@@ -19,6 +19,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -30,6 +31,19 @@ var RootCmd = &cobra.Command{
 	Use:   "epoxy",
 	Short: "A Memcached Proxy",
 	Long:  `A description which need to be longer.`,
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		logrus.SetOutput(os.Stderr)
+		flag, err := cmd.Flags().GetString("log-level")
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		level, err := logrus.ParseLevel(flag)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		logrus.SetLevel(level)
+		logrus.SetOutput(os.Stdout)
+	},
 }
 
 func Execute() {
@@ -42,6 +56,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	RootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.epoxy.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
