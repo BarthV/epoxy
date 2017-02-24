@@ -15,13 +15,14 @@
 package cmd
 
 import (
-	"log"
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/BarthV/epoxy/handlers/consulmemcached"
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/netflix/rend/handlers"
 	"github.com/netflix/rend/orcas"
 	"github.com/netflix/rend/server"
+	"github.com/pkg/profile"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -40,11 +41,15 @@ func init() {
 
 	proxyCmd.Flags().IntP("port", "p", 11211, "Port listen")
 	if err := viper.BindPFlag("port", proxyCmd.Flags().Lookup("port")); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("port")
 	}
 }
 
 func proxy(cmd *cobra.Command, args []string) {
+	if viper.GetBool("profile") {
+		defer profile.Start().Stop()
+	}
+
 	var MemcachedList memcache.ServerList
 	go consulmemcached.ConsulPoller(&MemcachedList)
 	mc := memcache.NewFromSelector(&MemcachedList)

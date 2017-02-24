@@ -16,10 +16,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -32,17 +32,13 @@ var RootCmd = &cobra.Command{
 	Short: "A Memcached Proxy",
 	Long:  `A description which need to be longer.`,
 	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-		logrus.SetOutput(os.Stderr)
-		flag, err := cmd.Flags().GetString("log-level")
+		log.SetOutput(os.Stderr)
+		level, err := log.ParseLevel(viper.GetString("log-level"))
 		if err != nil {
-			logrus.Fatal(err)
+			log.WithError(err).Fatal("Logrus: ParseLevel")
 		}
-		level, err := logrus.ParseLevel(flag)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		logrus.SetLevel(level)
-		logrus.SetOutput(os.Stdout)
+		log.SetLevel(level)
+		log.SetOutput(os.Stdout)
 	},
 }
 
@@ -57,16 +53,25 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
+	if err := viper.BindPFlag("log-level", RootCmd.PersistentFlags().Lookup("log-level")); err != nil {
+		log.WithError(err).Fatal("log-level")
+	}
+
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.epoxy.yaml)")
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	RootCmd.PersistentFlags().String("consul-address", "consul01-par.central.criteo.preprod:8500", "consul server to connect")
 	if err := viper.BindPFlag("consul.address", RootCmd.PersistentFlags().Lookup("consul-address")); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("consul.address")
 	}
 	RootCmd.PersistentFlags().String("consul-service", "memcached-mesos-test1", "consul service")
 	if err := viper.BindPFlag("consul.service", RootCmd.PersistentFlags().Lookup("consul-service")); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("consul.service")
+	}
+
+	RootCmd.PersistentFlags().Bool("profile", false, "Profile application")
+	if err := viper.BindPFlag("profile", RootCmd.PersistentFlags().Lookup("profile")); err != nil {
+		log.WithError(err).Fatal("profile")
 	}
 }
 
