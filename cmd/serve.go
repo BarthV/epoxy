@@ -43,6 +43,11 @@ func init() {
 	if err := viper.BindPFlag("port", proxyCmd.Flags().Lookup("port")); err != nil {
 		log.WithError(err).Fatal("port")
 	}
+
+	proxyCmd.Flags().StringP("timeout", "t", "100ms", "Memcache backend timeout")
+	if err := viper.BindPFlag("timeout", proxyCmd.Flags().Lookup("timeout")); err != nil {
+		log.WithError(err).Fatal("timeout")
+	}
 }
 
 func proxy(cmd *cobra.Command, args []string) {
@@ -53,6 +58,7 @@ func proxy(cmd *cobra.Command, args []string) {
 	var MemcachedList memcache.ServerList
 	go consulmemcached.ConsulPoller(&MemcachedList)
 	mc := memcache.NewFromSelector(&MemcachedList)
+	mc.Timeout = viper.GetDuration("timeout")
 
 	server.ListenAndServe(
 		server.ListenArgs{

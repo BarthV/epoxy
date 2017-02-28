@@ -25,7 +25,11 @@ func ConsulPoller(list *memcache.ServerList) {
 			continue
 		}
 		for _, service := range res {
-			cluster = append(cluster, service.Service.Address+":"+strconv.Itoa(service.Service.Port))
+			ip := service.Service.Address
+			if ip == "" {
+				ip = service.Node.Address
+			}
+			cluster = append(cluster, ip+":"+strconv.Itoa(service.Service.Port))
 		}
 		err = list.SetServers(cluster...)
 		if err != nil {
