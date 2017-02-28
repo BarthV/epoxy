@@ -1,7 +1,6 @@
 package consulmemcached
 
 import (
-	"fmt"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,7 +16,7 @@ type Handler struct {
 
 func New(mclient *memcache.Client) handlers.HandlerConst {
 	return func() (handlers.Handler, error) {
-		fmt.Println(">> Starting Proxy ! <<")
+		log.Info("New connexion")
 		handler := &Handler{
 			mc: mclient,
 		}
