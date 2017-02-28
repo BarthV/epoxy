@@ -10,9 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var consulOptions = api.QueryOptions{}
-
-func ConsulPoller(list *memcache.ServerList) {
+func ConsulPoller(list *memcache.ServerList, consulOptions api.QueryOptions) {
 	consulconf := api.DefaultConfig()
 	consulconf.Address = viper.GetString("consul.address")
 	consul, _ := api.NewClient(consulconf)

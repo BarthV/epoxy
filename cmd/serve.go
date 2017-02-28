@@ -19,6 +19,7 @@ import (
 
 	"github.com/BarthV/epoxy/handlers/consulmemcached"
 	"github.com/bradfitz/gomemcache/memcache"
+	consulApi "github.com/hashicorp/consul/api"
 	"github.com/netflix/rend/handlers"
 	"github.com/netflix/rend/orcas"
 	"github.com/netflix/rend/server"
@@ -56,7 +57,9 @@ func proxy(cmd *cobra.Command, args []string) {
 	}
 
 	var MemcachedList memcache.ServerList
-	go consulmemcached.ConsulPoller(&MemcachedList)
+	var consulOptions = consulApi.QueryOptions{}
+
+	go consulmemcached.ConsulPoller(&MemcachedList, consulOptions)
 	mc := memcache.NewFromSelector(&MemcachedList)
 	mc.Timeout = viper.GetDuration("timeout")
 
