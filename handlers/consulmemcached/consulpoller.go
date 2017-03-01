@@ -14,10 +14,11 @@ func ConsulPoller(list *memcache.ServerList, consulOptions api.QueryOptions) {
 	consulconf := api.DefaultConfig()
 	consulconf.Address = viper.GetString("consul.address")
 	consul, _ := api.NewClient(consulconf)
+	consulIP := viper.GetString("consul.service")
 
 	for {
 		cluster := []string{}
-		res, resqry, err := consul.Health().Service(viper.GetString("consul.service"), "", true, &consulOptions)
+		res, resqry, err := consul.Health().Service(consulIP, "", true, &consulOptions)
 		if err != nil {
 			log.WithError(err).Error("Consul Services query failed")
 			continue
